@@ -237,7 +237,7 @@ export default function Home() {
 
             {/* 월별 검색 트렌드 */}
             {analyzeData.seed && (
-              <TrendChart keyword={analyzeData.seed} />
+              <TrendChart keyword={analyzeData.seed} totalVolume={seedItem?.totalVolume} />
             )}
 
             {/* 연관 키워드 테이블 */}

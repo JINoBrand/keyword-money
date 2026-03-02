@@ -21,6 +21,7 @@ interface TrendEntry {
 
 interface Props {
   keyword: string;
+  totalVolume?: number;
 }
 
 const YEAR_COLORS: Record<string, string> = {
@@ -29,9 +30,16 @@ const YEAR_COLORS: Record<string, string> = {
   "2026": "#f97316",  // orange (현재)
 };
 
-export function TrendChart({ keyword }: Props) {
+function formatVolume(value: number): string {
+  if (value >= 10000) return `${(value / 10000).toFixed(1)}만`;
+  if (value >= 1000) return `${(value / 1000).toFixed(1)}천`;
+  return String(value);
+}
+
+export function TrendChart({ keyword, totalVolume }: Props) {
   const [data, setData] = useState<TrendEntry[]>([]);
   const [years, setYears] = useState<string[]>([]);
+  const [isActualVolume, setIsActualVolume] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,7 +52,7 @@ export function TrendChart({ keyword }: Props) {
     fetch("/api/trend", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ keyword }),
+      body: JSON.stringify({ keyword, totalVolume }),
     })
       .then((res) => res.json())
       .then((d) => {
@@ -53,11 +61,12 @@ export function TrendChart({ keyword }: Props) {
         } else {
           setData(d.trend || []);
           setYears(d.years || []);
+          setIsActualVolume(d.isActualVolume || false);
         }
       })
       .catch(() => setError("트렌드 데이터 로드 실패"))
       .finally(() => setLoading(false));
-  }, [keyword]);
+  }, [keyword, totalVolume]);
 
   if (error) return null;
 
@@ -79,10 +88,16 @@ export function TrendChart({ keyword }: Props) {
               />
               <YAxis
                 tick={{ fontSize: 12 }}
-                domain={[0, 100]}
+                domain={["auto", "auto"]}
+                tickFormatter={isActualVolume ? formatVolume : undefined}
               />
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              <Tooltip formatter={(value: any, name: any) => [`${value}`, `${name}년`]} />
+              <Tooltip
+                formatter={(value: any, name: any) => [
+                  isActualVolume ? Number(value).toLocaleString() : value,
+                  `${name}년`,
+                ]}
+              />
               <Legend formatter={(value) => `${value}년`} />
               {years.map((year) => (
                 <Line
@@ -104,7 +119,9 @@ export function TrendChart({ keyword }: Props) {
           </p>
         )}
         <p className="mt-2 text-xs text-muted-foreground">
-          * 네이버 DataLab 기준 상대 검색량 (최대값 = 100)
+          {isActualVolume
+            ? "* 네이버 DataLab 트렌드 기반 추정 검색량 (최근 월 실제 검색량 기준 환산)"
+            : "* 네이버 DataLab 기준 상대 검색량 (최대값 = 100)"}
         </p>
       </CardContent>
     </Card>

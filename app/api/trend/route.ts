@@ -7,7 +7,7 @@ interface TrendDataPoint {
 
 export async function POST(request: NextRequest) {
   try {
-    const { keyword } = await request.json();
+    const { keyword, totalVolume } = await request.json();
 
     if (!keyword || typeof keyword !== "string") {
       return NextResponse.json({ error: "키워드를 입력해주세요." }, { status: 400 });
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       return !(periodDate.getFullYear() === now.getFullYear() && periodDate.getMonth() === now.getMonth());
     });
 
-    // 월(1~12) x 연도별로 정리: { month: 1, "2024": 80, "2025": 65, "2026": 40 }
+    // 월(1~12) x 연도별로 정리
     const monthMap: Record<number, Record<string, number>> = {};
     const years = new Set<string>();
 
@@ -70,15 +70,32 @@ export async function POST(request: NextRequest) {
       years.add(year);
 
       if (!monthMap[month]) monthMap[month] = {};
-      monthMap[month][year] = Math.round(d.ratio * 10) / 10;
+      monthMap[month][year] = d.ratio;
     }
+
+    // totalVolume이 있으면 상대값 → 추정 실제 검색량 변환
+    // 스케일링: 가장 최근 완료 월의 ratio를 기준으로 totalVolume과 매핑
+    let scaleFactor = 1;
+    if (totalVolume && totalVolume > 0) {
+      // 최근 완료 월의 ratio 찾기
+      const sortedPeriods = filtered.sort((a: TrendDataPoint, b: TrendDataPoint) =>
+        b.period.localeCompare(a.period)
+      );
+      const latestRatio = sortedPeriods[0]?.ratio;
+      if (latestRatio && latestRatio > 0) {
+        scaleFactor = totalVolume / latestRatio;
+      }
+    }
+
+    const useActual = totalVolume && totalVolume > 0 && scaleFactor > 1;
 
     const trend = Array.from({ length: 12 }, (_, i) => {
       const month = i + 1;
       const entry: Record<string, string | number> = { month: `${month}월` };
       for (const year of years) {
         if (monthMap[month]?.[year] !== undefined) {
-          entry[year] = monthMap[month][year];
+          const raw = monthMap[month][year];
+          entry[year] = useActual ? Math.round(raw * scaleFactor) : Math.round(raw * 10) / 10;
         }
       }
       return entry;
@@ -88,6 +105,7 @@ export async function POST(request: NextRequest) {
       keyword,
       trend,
       years: Array.from(years).sort(),
+      isActualVolume: !!useActual,
     });
   } catch (error) {
     console.error("Trend API error:", error);
