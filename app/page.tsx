@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,7 +30,7 @@ const gradeColors: Record<string, string> = {
   D: "bg-red-500 text-white hover:bg-red-500",
 };
 
-const EXAMPLE_KEYWORDS = [
+const FALLBACK_KEYWORDS = [
   "다이어트 식단",
   "아이폰 케이스 추천",
   "강아지 간식",
@@ -48,8 +48,20 @@ export default function Home() {
   );
 
   const [tagOpen, setTagOpen] = useState(false);
+  const [trendingKeywords, setTrendingKeywords] = useState<string[]>(FALLBACK_KEYWORDS);
 
   const { remaining, canUse, increment } = useUsageLimit();
+
+  useEffect(() => {
+    fetch("/api/trending")
+      .then((res) => res.json())
+      .then((d) => {
+        if (d.keywords && d.keywords.length > 0) {
+          setTrendingKeywords(d.keywords);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleAnalyze = async (searchKeyword?: string) => {
     const kw = searchKeyword || keyword;
@@ -135,9 +147,9 @@ export default function Home() {
           </Button>
         </div>
 
-        {/* 예시 키워드 */}
+        {/* 인기 검색어 */}
         <div className="mx-auto mt-3 flex max-w-xl flex-wrap justify-center gap-2">
-          {EXAMPLE_KEYWORDS.map((ex) => (
+          {trendingKeywords.map((ex) => (
             <button
               key={ex}
               onClick={() => {
