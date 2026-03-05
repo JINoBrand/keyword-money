@@ -54,7 +54,7 @@ export function TagModal({ open, onClose, keywords }: Props) {
           </TabsList>
           {Object.entries(formatters).map(([key, fn]) => (
             <TabsContent key={key} value={key}>
-              <pre className="rounded-md bg-muted p-4 text-sm whitespace-pre-wrap break-all min-h-[80px]">
+              <pre className="rounded-xl bg-background p-4 text-sm whitespace-pre-wrap break-all min-h-[80px] neu-pressed">
                 {fn(keywords)}
               </pre>
             </TabsContent>

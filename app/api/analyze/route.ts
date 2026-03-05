@@ -3,7 +3,30 @@ import { createVolumeProvider } from "@/lib/providers/volumeProvider";
 import { createSerpProvider } from "@/lib/providers/serpProvider";
 import { generateRelatedKeywords } from "@/lib/providers/relatedKeywords";
 import { calculateProfitScore } from "@/lib/scoring/profitScore";
-import { AnalyzeResponse } from "@/types";
+import { AnalyzeResponse, KeywordItem } from "@/types";
+import { logEvent } from "@/lib/supabase/logger";
+
+// 네이버 자동완성 연관검색어 가져오기
+async function fetchAutoComplete(keyword: string): Promise<string[]> {
+  try {
+    const res = await fetch(
+      `https://ac.search.naver.com/nx/ac?q=${encodeURIComponent(keyword)}&con=1&frm=nv&ans=2&r_format=json&r_enc=UTF-8&r_unicode=0&t_koreng=1&run=2&rev=4&q_enc=UTF-8&st=100`,
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        },
+      }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    const items: string[][] = data.items?.[0] || [];
+    return items
+      .map((item) => item[0])
+      .filter((kw) => kw !== keyword && kw.length > 1);
+  } catch {
+    return [];
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -77,12 +100,49 @@ export async function POST(request: NextRequest) {
     const seedItem = allItems[0];
     const relatedItems = allItems.slice(1).sort((a, b) => b.profitScore - a.profitScore);
 
+    // 5단계: 네이버 자동완성 연관검색어 가져오기 + 분석
+    const acKeywords = await fetchAutoComplete(seed);
+    console.log(`[Analyze] Autocomplete: ${acKeywords.join(", ")}`);
+
+    let autoCompleteKeywords: KeywordItem[] = [];
+    if (acKeywords.length > 0) {
+      const analyzedMap = new Map(allItems.map((item) => [item.keyword, item]));
+      const needAnalysis = acKeywords.filter((kw) => !analyzedMap.has(kw));
+
+      const acAnalyzedMap = new Map<string, KeywordItem>();
+
+      if (needAnalysis.length > 0) {
+        const acVolumeData = await volumeProvider.getVolume([needAnalysis[0]]);
+        const acVolumeMap = new Map(acVolumeData.map((v) => [v.keyword, v]));
+        const acToSerp = needAnalysis.filter((kw) => acVolumeMap.has(kw));
+        if (acToSerp.length > 0) {
+          const acSerpData = await serpProvider.analyze(acToSerp);
+          for (let i = 0; i < acToSerp.length; i++) {
+            const vol = acVolumeMap.get(acToSerp[i]);
+            const serp = acSerpData[i];
+            if (vol && serp) {
+              const item = calculateProfitScore(vol, serp);
+              acAnalyzedMap.set(item.keyword, item);
+            }
+          }
+        }
+      }
+
+      autoCompleteKeywords = acKeywords
+        .map((kw) => analyzedMap.get(kw) || acAnalyzedMap.get(kw))
+        .filter((item): item is KeywordItem => item != null)
+        .sort((a, b) => b.profitScore - a.profitScore);
+    }
+
     const response: AnalyzeResponse = {
       seedItem: seedItem || null,
       items: relatedItems,
+      autoCompleteKeywords,
       seed: seedKeyword,
       analyzedAt: new Date().toISOString(),
     };
+
+    logEvent("analyze", { keyword: seed, result_count: relatedItems.length });
 
     return NextResponse.json(response);
   } catch (error) {

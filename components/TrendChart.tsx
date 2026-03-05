@@ -71,7 +71,7 @@ export function TrendChart({ keyword, totalVolume }: Props) {
   if (error) return null;
 
   return (
-    <Card className="border-primary/10">
+    <Card className="">
       <CardHeader className="pb-2">
         <CardTitle className="text-lg">월별 검색 트렌드</CardTitle>
       </CardHeader>

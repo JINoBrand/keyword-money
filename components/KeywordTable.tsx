@@ -123,7 +123,7 @@ export function KeywordTable({
         </div>
       </div>
 
-      <div className="rounded-md border overflow-x-auto">
+      <div className="rounded-2xl overflow-x-auto border border-border/30 shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
@@ -204,7 +204,7 @@ export function KeywordTable({
                   </Tooltip>
                 </TableCell>
                 <TableCell className="text-center">
-                  <Badge className={gradeColors[item.grade]}>
+                  <Badge className={`${gradeColors[item.grade]} ${item.grade === "S" ? "badge-shimmer" : ""}`}>
                     {item.grade}
                   </Badge>
                 </TableCell>

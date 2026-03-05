@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logEvent } from "@/lib/supabase/logger";
 
 interface TrendDataPoint {
   period: string;
@@ -100,6 +101,8 @@ export async function POST(request: NextRequest) {
       }
       return entry;
     });
+
+    logEvent("trend", { keyword });
 
     return NextResponse.json({
       keyword,
