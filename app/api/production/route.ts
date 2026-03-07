@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { ProductionResponse } from "@/types";
 import { logEvent, calcOpenAICost } from "@/lib/supabase/logger";
+import { createClient } from "@/lib/supabase/server";
+import { checkAndIncrementUsage } from "@/lib/usage";
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,6 +12,28 @@ export async function POST(request: NextRequest) {
         { error: "OpenAI API 키가 설정되지 않았습니다." },
         { status: 500 }
       );
+    }
+
+    // 사용량 제한 체크 (Production은 Free에서 차단)
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: "로그인이 필요합니다." },
+        { status: 401 }
+      );
+    }
+    try {
+      const usage = await checkAndIncrementUsage(user.id, "production");
+      if (!usage.allowed) {
+        logEvent("feature_blocked_review_offer_shown", { plan: usage.plan, action: "production" }, user.id);
+        return NextResponse.json(
+          { error: "paywall", plan: usage.plan, limit: usage.limit, used: usage.used },
+          { status: 403 }
+        );
+      }
+    } catch {
+      // usage 체크 실패 시 통과 허용
     }
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });

@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Search, Layers, FileText } from "lucide-react";
 
 const steps = [
-  { label: "키워드 탐색", icon: Search, href: "/discovery" },
-  { label: "키워드 확장", icon: Layers, href: "/analysis" },
-  { label: "콘텐츠 아이디어", icon: FileText, href: "/production" },
+  { label: "키워드 탐색", icon: Search, href: "/discovery", wsHref: "/keyword/discover" },
+  { label: "키워드 확장", icon: Layers, href: "/analysis", wsHref: "/keyword/analyze" },
+  { label: "콘텐츠 아이디어", icon: FileText, href: "/production", wsHref: "/keyword/ideas" },
 ];
 
 interface StepperProps {
@@ -14,6 +15,12 @@ interface StepperProps {
 }
 
 export function Stepper({ currentStep }: StepperProps) {
+  const pathname = usePathname();
+  const isWorkspace = pathname.startsWith("/keyword/") || pathname.startsWith("/blog/");
+
+  // 워크스페이스 안에서는 사이드바가 네비 역할을 하므로 숨김
+  if (isWorkspace) return null;
+
   return (
     <div className="flex items-center justify-center gap-1 sm:gap-2 py-6">
       {steps.map((step, idx) => {

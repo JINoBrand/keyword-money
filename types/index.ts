@@ -152,3 +152,52 @@ export interface TrendingCategory {
   name: string;
   keywords: string[];
 }
+
+// ── Subscription & Billing Types ──
+
+export type PlanType = "free" | "basic" | "pro";
+export type ActionType = "discovery" | "analysis" | "production";
+
+export interface PlanLimits {
+  discovery: number;
+  analysis: number;
+  production: number;
+}
+
+export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
+  free: { discovery: 10, analysis: 10, production: 0 },
+  basic: { discovery: 999999, analysis: 999999, production: 10 },
+  pro: { discovery: 999999, analysis: 999999, production: 100 },
+};
+
+export interface UserProfile {
+  user_id: string;
+  plan: PlanType;
+  plan_started_at: string | null;
+  plan_expires_at: string | null;
+}
+
+export interface UserSubscription {
+  user_id: string;
+  stripe_customer_id: string;
+  stripe_subscription_id: string;
+  status: string;
+  current_period_end: string;
+  cancel_at_period_end: boolean;
+}
+
+export interface UsageDaily {
+  user_id: string;
+  date: string;
+  discovery_count: number;
+  analysis_count: number;
+  production_count: number;
+}
+
+export interface UsageCheckResult {
+  allowed: boolean;
+  plan: PlanType;
+  used: number;
+  limit: number;
+  remaining: number;
+}

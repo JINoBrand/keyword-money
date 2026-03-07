@@ -463,6 +463,22 @@
   to { transform: rotate(360deg); }
 }
 
+/* 트렌딩 키워드 무한 롤링 */
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-ticker {
+  animation: ticker 40s linear infinite;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Blog prose styles */
 .prose {
   font-size: 1rem;

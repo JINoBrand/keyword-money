@@ -8,9 +8,12 @@ export function AuthButtons({ user }: { user: User | null }) {
   if (user) {
     return (
       <div className="flex items-center gap-3">
-        <span className="text-sm text-muted-foreground">
-          {user.email}
-        </span>
+        <Link
+          href="/account"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"
+        >
+          내 계정
+        </Link>
         <button
           onClick={() => logout()}
           className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"

@@ -22,7 +22,13 @@ type EventType =
   | "signup"
   | "discovery"
   | "expansion"
-  | "production";
+  | "production"
+  | "review_program_modal_viewed"
+  | "review_program_cta_blog_clicked"
+  | "review_program_cta_submit_clicked"
+  | "review_program_submitted"
+  | "review_program_dismissed"
+  | "feature_blocked_review_offer_shown";
 
 export function logEvent(
   eventType: EventType,

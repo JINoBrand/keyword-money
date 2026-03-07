@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState, useEffect, useCallback, useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Stepper } from "@/components/Stepper";
 import { useUsageLimit } from "@/hooks/useUsageLimit";
 import { DiscoveryResponse, MoneyKeywordItem, TrendingCategory } from "@/types";
+import { ReviewProgramModal } from "@/components/ReviewProgramModal";
 import {
   Table,
   TableBody,
@@ -53,6 +54,7 @@ export default function DiscoveryPage() {
 
 function DiscoveryContent() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
 
@@ -71,6 +73,7 @@ function DiscoveryContent() {
   >([]);
 
   const { remaining, canUse, increment } = useUsageLimit();
+  const [showReviewModal, setShowReviewModal] = useState(false);
 
   useEffect(() => {
     fetch("/api/trending")
@@ -110,6 +113,11 @@ function DiscoveryContent() {
 
         if (!res.ok) {
           const err = await res.json();
+          if (res.status === 403 && err.error === "paywall") {
+            setShowReviewModal(true);
+            setLoading(false);
+            return;
+          }
           throw new Error(err.error || "탐색 실패");
         }
 
@@ -133,7 +141,8 @@ function DiscoveryContent() {
   }, []);
 
   const handleKeywordClick = (kw: MoneyKeywordItem) => {
-    router.push(`/analysis?keyword=${encodeURIComponent(kw.keyword)}`);
+    const base = pathname.startsWith("/keyword/") ? "/keyword/analyze" : "/analysis";
+    router.push(`${base}?keyword=${encodeURIComponent(kw.keyword)}`);
   };
 
   const getSaturation = (item: MoneyKeywordItem) =>
@@ -160,6 +169,11 @@ function DiscoveryContent() {
 
   return (
     <main className="bg-background min-h-screen">
+      <ReviewProgramModal
+        open={showReviewModal}
+        onClose={() => setShowReviewModal(false)}
+        source="discovery"
+      />
       <Toaster richColors />
       <div className="container mx-auto px-4">
         <Stepper currentStep={1} />

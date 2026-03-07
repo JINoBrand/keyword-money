@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState, useEffect, useCallback } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -149,8 +149,10 @@ export default function AnalysisPage() {
 
 function AnalysisContent() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const keywordParam = searchParams.get("keyword") || "";
+  const isWorkspace = pathname.startsWith("/keyword/");
 
   const [data, setData] = useState<ExpansionResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -211,7 +213,8 @@ function AnalysisContent() {
         data.subKeywords.map((s) => s.keyword).join(",")
       );
     }
-    router.push(`/production?${params.toString()}`);
+    const base = isWorkspace ? "/keyword/ideas" : "/production";
+    router.push(`${base}?${params.toString()}`);
   };
 
   return (
@@ -254,8 +257,8 @@ function AnalysisContent() {
               {error}
             </div>
             <div className="text-center mt-4">
-              <Link href="/discovery">
-                <Button variant="outline">Step 1로 돌아가기</Button>
+              <Link href={isWorkspace ? "/keyword/discover" : "/discovery"}>
+                <Button variant="outline">키워드 탐색으로 돌아가기</Button>
               </Link>
             </div>
           </section>

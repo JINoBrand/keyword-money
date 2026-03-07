@@ -8,6 +8,8 @@ import {
 } from "@/lib/scoring/moneyScore";
 import { ExpansionResponse, MoneyKeywordItem, BlogReference } from "@/types";
 import { logEvent } from "@/lib/supabase/logger";
+import { createClient } from "@/lib/supabase/server";
+import { checkAndIncrementUsage } from "@/lib/usage";
 
 // 네이버 자동완성 연관검색어
 async function fetchAutoComplete(keyword: string): Promise<string[]> {
@@ -91,6 +93,23 @@ export async function POST(request: NextRequest) {
         { error: "키워드를 입력해주세요." },
         { status: 400 }
       );
+    }
+
+    // 사용량 제한 체크
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      try {
+        const usage = await checkAndIncrementUsage(user.id, "analysis");
+        if (!usage.allowed) {
+          return NextResponse.json(
+            { error: "paywall", plan: usage.plan, limit: usage.limit, used: usage.used },
+            { status: 403 }
+          );
+        }
+      } catch {
+        // usage 체크 실패 시 통과 허용
+      }
     }
 
     const seed = keyword.trim();

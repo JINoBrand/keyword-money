@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CoinSymbol } from "@/components/CoinSymbol";
 import { createClient } from "@/lib/supabase/server";
 import { AuthButtons } from "@/components/AuthButtons";
+import { PlanBadge } from "@/components/PlanBadge";
 
 export async function Header() {
   let user = null;
@@ -42,6 +43,7 @@ export async function Header() {
             >
               블로그
             </Link>
+            <PlanBadge isLoggedIn={!!user} />
             <AuthButtons user={user} />
           </nav>
         </div>

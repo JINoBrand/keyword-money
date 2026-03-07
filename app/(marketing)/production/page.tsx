@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Stepper } from "@/components/Stepper";
 import { useUsageLimit } from "@/hooks/useUsageLimit";
 import { ProductionResponse } from "@/types";
+import { ReviewProgramModal } from "@/components/ReviewProgramModal";
 import {
   Loader2,
   Copy,
@@ -32,6 +33,7 @@ export default function ProductionPage() {
 }
 
 function ProductionContent() {
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const mainParam = searchParams.get("main") || "";
   const subParam = searchParams.get("sub") || "";
@@ -48,6 +50,7 @@ function ProductionContent() {
   const [copiedOutline, setCopiedOutline] = useState(false);
 
   const { canUse, increment } = useUsageLimit();
+  const [showReviewModal, setShowReviewModal] = useState(false);
 
   const handleGenerate = useCallback(async () => {
     if (!mainKeyword.trim()) {
@@ -75,6 +78,14 @@ function ProductionContent() {
 
       if (!res.ok) {
         const err = await res.json();
+        if (res.status === 403 && err.error === "paywall") {
+          setShowReviewModal(true);
+          setLoading(false);
+          return;
+        }
+        if (res.status === 401) {
+          throw new Error("로그인이 필요합니다.");
+        }
         throw new Error(err.error || "생성 실패");
       }
 
@@ -136,6 +147,11 @@ function ProductionContent() {
 
   return (
     <main className="bg-background min-h-screen">
+      <ReviewProgramModal
+        open={showReviewModal}
+        onClose={() => setShowReviewModal(false)}
+        source="production"
+      />
       <Toaster richColors />
       <div className="container mx-auto px-4">
         <Stepper currentStep={3} />
@@ -367,7 +383,7 @@ function ProductionContent() {
 
             {/* 하단 네비게이션 */}
             <div className="flex justify-center gap-4 pt-4">
-              <Link href="/discovery">
+              <Link href={pathname.startsWith("/keyword/") ? "/keyword/discover" : "/discovery"}>
                 <Button variant="outline" className="gap-1">
                   새 키워드 탐색
                 </Button>
